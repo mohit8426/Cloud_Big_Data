@@ -1,0 +1,40 @@
+#!/bin/bash
+#SBATCH -A uot187
+#SBATCH --job-name="kmeans"
+#SBATCH --output="kmeans.distr.out"
+#SBATCH --partition=compute
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=120
+#SBATCH --mem=249325M
+#SBATCH --export=ALL 
+#SBATCH --time=29
+
+export HADOOP_CONF_DIR=/home/$USER/expansecluster
+module load openjdk hadoop spark
+
+# location of scratch space
+scratch=/scratch/$USER/job_$SLURM_JOB_ID
+
+myhadoop-configure.sh -s $scratch
+
+SPARK_ENV=$HADOOP_CONF_DIR/spark/spark-env.sh
+echo "export TMP=$scratch/tmp" >> $SPARK_ENV
+echo "export TMPDIR=$scratch/tmp" >> $SPARK_ENV
+echo "export SPARK_LOCAL_DIRS=$scratch" >> $SPARK_ENV
+source $SPARK_ENV
+
+export SPARK_MASTER_HOST=$SPARK_MASTER_IP
+
+SPARK_OPTIONS="--driver-memory 24G --num-executors 4 --executor-cores 12 --executor-memory 24G --supervise"
+
+# start HDFS
+start-dfs.sh
+# start Spark
+myspark start
+
+hdfs dfs -mkdir -p /user/$USER
+hdfs dfs -put points-large.txt /user/$USER/points-large.txt
+hdfs dfs -put centroids.txt /user/$USER/centroids.txt
+spark-submit --class KMeans --master $MASTER $SPARK_OPTIONS kmeans.jar /user/$USER/points-large.txt /user/$USER/centroids.txt
+
+myhadoop-cleanup.sh

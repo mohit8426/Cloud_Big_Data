@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH -A uot187
+#SBATCH --job-name="kmeans.local"
+#SBATCH --output="kmeans.local.out"
+#SBATCH --partition=shared
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=2
+#SBATCH --export=ALL 
+#SBATCH --time=10
+
+module load openjdk hadoop spark
+
+spark-submit --class KMeans --master local[2] kmeans.jar points-small.txt centroids.txt
